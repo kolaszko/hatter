@@ -42,42 +42,66 @@ function arrayOfMembers()
     );
 }
 
-// $globalTable = arrayOfMembers();
-
-function generateJsonData($data)
+function generateJsonData($data, $version)
 {
     $data_decoded = json_decode($data);
     $arr = arrayOfMembers();
     $time = time();
     $readings = array();
-    foreach ($data_decoded as $sensor => $data) {
+    if ($version == "v2") {
+        foreach ($data_decoded as $sensor => $data) {
+            $base_id = $data->id;
+            foreach($data->values as $counter => $val)
+            {
+                $read = prepareSingleReadingV2($val, $counter, $base_id, $arr, $time);
+                array_push($readings, $read);
+            }
+            
+        }
+        $json_data = json_encode($readings);
+        echo $json_data;
 
-        $read = prepareSingleReading($data, $arr, $time);
-        array_push($readings, $read);
+    } else {
+        foreach ($data_decoded as $sensor => $data) {
+
+            $read = prepareSingleReading($data, $arr, $time);
+            array_push($readings, $read);
+        }
+        $json_data = json_encode($readings);
+        echo $json_data;
     }
-    $json_data = json_encode($readings);
-    echo $json_data;
 }
 
-function prepareSingleValue($values, $members, $idBase)
-{   
+function prepareValues($values, $members, $idBase)
+{
     $singleValues = array();
-    for($i=0; $i < count($values); $i++){
-        $value['id'] = sprintf('%s_%d', $idBase, $i);
-        $value['name'] = $members[$i];
-        $value['value'] = $values[$i];
+    for ($i = 0; $i < count($values); $i++) {
+        $value["id"] = sprintf("%s_%d", $idBase, $i);
+        $value["name"] = $members[$i];
+        $value["value"] = $values[$i];
         array_push($singleValues, $value);
     }
     return $singleValues;
 }
 
-function prepareSingleReading($jsonReading, $arrayOfMembers, $timestamp)
+function prepareSingleReading($jsonReading, $members, $timestamp)
 {
-    $reading["name"] = $arrayOfMembers[$jsonReading->id]["name"];
-    $reading['unit'] = $arrayOfMembers[$jsonReading->id]['unit'];
-    $reading['description'] = $arrayOfMembers[$jsonReading->id]['description'];
-    $reading['id'] = $jsonReading->id;
-    $reading['values'] = prepareSingleValue($jsonReading->values, $arrayOfMembers[$jsonReading->id]['valueNames'], $reading['id']);
+    $reading["name"] = $members[$jsonReading->id]["name"];
+    $reading["unit"] = $members[$jsonReading->id]["unit"];
+    $reading["description"] = $members[$jsonReading->id]["description"];
+    $reading["id"] = $jsonReading->id;
+    $reading["values"] = prepareValues($jsonReading->values, $members[$jsonReading->id]["valueNames"], $reading["id"]);
+    $reading["timestamp"] = $timestamp;
+    return $reading;
+}
+
+function prepareSingleReadingV2($value, $counter, $baseId, $members, $timestamp)
+{
+    $reading["id"] = sprintf("%s_%d",$baseId, $counter);
+    $reading["value"] = $value;
+    $reading["name"] = sprintf("%s %s", $members[$baseId]["name"], $members[$baseId]["valueNames"][$counter]);
+    $reading["unit"] = $members[$baseId]["unit"];
+    $reading["description"] = $members[$baseId]["description"];
     $reading['timestamp'] = $timestamp;
     return $reading;
 }
