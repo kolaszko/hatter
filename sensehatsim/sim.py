@@ -2,7 +2,7 @@ from random import random
 import json
 
 def tripleRandom():
-    return [random(), random(), random()]
+    return [random() for i in range(3)]
 
 def main():
     data = [
